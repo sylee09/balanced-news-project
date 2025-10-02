@@ -1,8 +1,9 @@
-package producer.crawling;
+package producer.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import producer.crawling.NaverApiValueObject;
 
 @Configuration
 public class NaverApiConfig {

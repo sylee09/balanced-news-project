@@ -11,5 +11,4 @@ import lombok.Setter;
 public class NaverApiValueObject {
     private String clientId;
     private String clientSecret;
-
 }
