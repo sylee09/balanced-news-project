@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class NewsMessage {
     String title;
-    @JsonProperty("originallink")
+    @JsonProperty("link")
     String url;
     String category;
     LocalDateTime createdDateTime;

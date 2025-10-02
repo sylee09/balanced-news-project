@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -55,6 +56,10 @@ public class Crawling {
                     for (NewsMessage message : apiResponse.getItems()) {
                         message.setCategory(sec);
                         String articleUrl = message.getUrl();
+                        // 네이버 뉴스가 아니면 스킵하여 상세 크롤링을 용이하게 함
+                        if (articleUrl == null || !articleUrl.contains("news.naver.com")) {
+                            continue;
+                        }
 
                         // 이미 처리한 기사면 더이상 진행 하지 않음
                         if (newsUrlCache.getIfPresent(articleUrl) != null) {
@@ -64,8 +69,11 @@ public class Crawling {
 
                         // 상세 내용 크롤링
                         String articleDetail = newsDetailCrawler.crawlArticleContent(articleUrl);
+                        message.setDetail(articleDetail);
+                        message.setCreatedDateTime(LocalDateTime.now());
 
                         // 카프카로 전송
+
 
                         // 처리 완료 했으므로 캐시에 이값을 저장
                         newsUrlCache.put(articleUrl, Boolean.TRUE);
