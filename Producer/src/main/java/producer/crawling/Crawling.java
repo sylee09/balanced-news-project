@@ -74,6 +74,7 @@ public class Crawling {
                         // 카프카로 전송
 
 
+
                         // 처리 완료 했으므로 캐시에 이값을 저장
                         newsUrlCache.put(articleUrl, Boolean.TRUE);
                         log.info("message: {}", message);
