@@ -18,6 +18,8 @@ import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 @RequiredArgsConstructor
 @Service
 @Slf4j
@@ -33,58 +35,49 @@ public class Crawling {
     String[] section = new String[]{"정치", "경제", "사회", "IT/과학"};
 
     public void crawl() {
+        for (String sec : section) {
+            try {
+                String q = URLEncoder.encode(sec, UTF_8); // UTF-8은 checked X
+                String apiURL = "https://openapi.naver.com/v1/search/news.json?query=" + q + "&display=100";
 
-        String text = null;
-        String apiURL = null;
+                Map<String, String> headers = Map.of(
+                        "X-Naver-Client-Id", vo.getClientId(),
+                        "X-Naver-Client-Secret", vo.getClientSecret()
+                );
 
-        try {
-            for (String sec : section) {
-                text = URLEncoder.encode(sec, "UTF-8");
-                apiURL = "https://openapi.naver.com/v1/search/news.json?query=" + text + "&display=100";
-                Map<String, String> requestHeaders = new HashMap<>();
-                requestHeaders.put("X-Naver-Client-Id", vo.getClientId());
-                requestHeaders.put("X-Naver-Client-Secret", vo.getClientSecret());
-
-                // Naver API 요청/응답 받음
-                String responseBody = get(apiURL, requestHeaders);
-
-                // API 요청 결과를 JSON으로 매핑
+                String responseBody = get(apiURL, headers); // 200이 아니면 여기서 예외 던지도록 하는 게 더 안전
                 NaverNewsResponse apiResponse = objectMapper.readValue(responseBody, NaverNewsResponse.class);
 
-                if (apiResponse.getItems() != null) {
-                    for (NewsMessage message : apiResponse.getItems()) {
+                if (apiResponse.getItems() == null) continue;
+
+                for (NewsMessage message : apiResponse.getItems()) {
+                    try {
                         message.setCategory(sec);
                         String articleUrl = message.getUrl();
-                        // 네이버 뉴스가 아니면 스킵하여 상세 크롤링을 용이하게 함
-                        if (articleUrl == null || !articleUrl.contains("news.naver.com")) {
-                            continue;
-                        }
 
-                        // 이미 처리한 기사면 더이상 진행 하지 않음
+                        if (articleUrl == null || !articleUrl.contains("news.naver.com")) continue;
                         if (newsUrlCache.getIfPresent(articleUrl) != null) {
-                            log.info("이미 처리한 기사");
+                            log.info("이미 처리한 기사: {}", articleUrl);
                             continue;
                         }
 
-                        // 상세 내용 크롤링
                         String articleDetail = newsDetailCrawler.crawlArticleContent(articleUrl);
                         message.setDetail(articleDetail);
                         message.setCreatedDateTime(LocalDateTime.now());
 
-                        // 카프카로 전송
+                        // TODO: 카프카 전송
 
-
-
-                        // 처리 완료 했으므로 캐시에 이값을 저장
                         newsUrlCache.put(articleUrl, Boolean.TRUE);
-                        log.info("message: {}", message);
+                        log.info("OK: {}", articleUrl);
+                    } catch (Exception itemEx) {
+                        // 개별 기사 실패는 스킵하고 다음 기사 진행
+                        log.warn("기사 처리 실패 (skip) url={} err={}", message.getUrl(), itemEx.toString());
                     }
                 }
+            } catch (Exception sectionEx) {
+                // 섹션 전체 실패는 기록하고 다음 섹션 진행
+                log.warn("섹션 수집 실패 (skip) section={} err={}", sec, sectionEx.toString());
             }
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("검색어 인코딩 실패", e);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
         }
     }
 

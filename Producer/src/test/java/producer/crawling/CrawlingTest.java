@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.io.IOException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -48,7 +50,7 @@ class CrawlingTest {
 
     @Test
     @DisplayName("성공적인 크롤링 동작: 상세 크롤러가 호출되고 캐시에 저장된다.")
-    void test1() {
+    void test1() throws IOException {
         String url = "https://news.naver.com/article/001/000000001";
         when(detailCrawler.crawlArticleContent(url)).thenReturn("Body");
 
@@ -63,7 +65,7 @@ class CrawlingTest {
 
     @Test
     @DisplayName("중복되는 기사는 더이상 크롤링 절차를 진행하지 않는다.")
-    void test2() {
+    void test2() throws IOException {
         String url = "https://news.naver.com/article/001/000000001";
         cache.put(url, Boolean.TRUE);
 
